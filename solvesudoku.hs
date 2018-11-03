@@ -1,57 +1,67 @@
 import Data.List
 
+main = interact (result . (solve) . toTable)
 
-main = interact solveSudoku
+data SudokuResult = Solved [Char] | Unsolvable [Char] (Int, Int)
+result (Solved table) = "Solved table:\n" ++ (toStr table)
+result (Unsolvable table (i, j)) =
+  "Unsolvable table! Conflict at (" ++ (show i) ++ "," ++ (show j) ++ ").\n"
+    ++ (toStr table)
 
-solveSudoku :: String -> String
-solveSudoku = resultString . solve . lines
+toTable chars = chars `intersect` (abc `union` emp)
+toStr table = (unlines $ map (intersperse ' ') $ nGroup size table)
 
-type Table = [[Char]]
-at table i j = (table !! i) !! j
-data SudokuResult = Solved Table | Unsolved Table | Unsolvable Table Int Int
-abc = ['1'..'9']
-(width, height) = (9, 9)
 (regW, regH) = (3, 3)
-regRowCount = height `div` regH
-regColumnCount = width `div` regW
+size = regW * regH
+fieldN = size * size
+abc = take size $ ['1'..'9'] ++ ['a'..]
+emp = ['0','-']
+toIJ index = (index `div` size, index `mod` size)
 
-resultString :: SudokuResult -> String
-resultString (Solved table) = "Solved table:\n" ++ (unlines table)
-resultString (Unsolved table) = "Unsolved table:\n" ++ (unlines table)
-resultString (Unsolvable table row col) =
-  "Unsolvable table! No good solution at field "
-   ++ (show col) ++ " in row " ++ (show row) ++ ":\n" ++ (unlines table)
+solve table = case fieldToSolve table of
+  Nothing -> Solved table
+  Just (i, p) -> case length p of
+    0 -> Unsolvable table $ toIJ i
+    1 -> solve $ replaceAt i (p !! 0) table
+    otherwise -> branch (i, p) table
+    where branch (i, p) = try (i, p) 0
+          try (i, p) j table
+            | j == length p = Unsolvable table $ toIJ i
+            | otherwise = result $ solve $ replaceAt i (p !! 0) table
+            where result (Unsolvable table _) = try (i, p) (j + 1) table
+                  result res = res
 
-solve :: Table -> SudokuResult
-solve rows
-  | all (all (\e -> e `elem` abc)) rows = Solved rows
-  | otherwise = Unsolved rows
-
-
-
-
-possibleAt :: Table -> Int -> Int -> [Char]
-possibleAt table i j
-  | elem e abc = [e]
-  | otherwise = abc \\ excluding
+fieldToSolve table = maybe Nothing try $ unfat 0
   where
-    e = at table i j
-    excluding = (rowValues `union` columnValues) `union` regionValues
-    rowValues = table !! i
-    columnValues = map (\row -> row !! j) table
-    regionValues = foldl1 (++) $ subTable i0 (i0 + regH) j0 (j0 + regW) table
-    (i0, j0) = (i `div` regH, j `div` regW)
+    try (i, p) = tryOn (i, p) (unfat $ i + 1)
+    tryOn f Nothing = Just f
+    tryOn (i, p) (Just (i1, p1))
+      | length p == 1 = Just (i, p)
+      | length p <= length p1 = tryOn (i, p) (unfat $ i1 + 1)
+      | length p1 == 1 = Just (i1, p1)
+      | otherwise = tryOn (i1, p1) (unfat $ i1 + 1)
+    unfat i
+      | i >= fieldN = Nothing
+      | (table !! i) `elem` abc = unfat (i + 1)
+      | otherwise = Just (i, possibleAt i table)
 
-replace :: [[a]] -> Int -> Int -> a -> [[a]]
-replace [] _ _ _ = []
-replace (as:ass) i j e
-  | i == 0 = (replaceAt as j e) : ass
-  | otherwise = as : (replace ass (i - 1) j e)
-replaceAt :: [a] -> Int -> a -> [a]
-replaceAt [] _ _ = []
-replaceAt (a:as) i e
+possibleAt index table = abc \\ (rowVals `union` colVals `union` regVals)
+  where
+    rowVals = values [i] [0..size-1]
+    colVals = values [0..size-1] [j]
+    regVals = values [ri0..ri1] [rj0..rj1]
+    (ri0, rj0) = (i - i `mod` regH, j - j `mod` regW)
+    (ri1, rj1) = (ri0 + regH - 1, rj0 + regW - 1)
+    values list0 list1 = map valueAt $ [(i,j) | i <- list0, j <- list1]
+    valueAt (i, j) = table !! (i * size + j)
+    (i, j) = toIJ index
+
+
+
+replaceAt _ _ [] = []
+replaceAt i e (a:as)
    | i == 0 = e : as
-   | otherwise = a : (replaceAt as (i - 1) e)
-
-subTable i0 i1 j0 j1 list = map (subList j0 j1) $ subList i0 i1 list
-subList i0 i1 list = take (i1 - i0) $ drop i0 list
+   | otherwise = a : (replaceAt (i - 1) e as)
+nGroup _ [] = []
+nGroup n list = group : (nGroup n rest)
+  where (group, rest) = splitAt n list
