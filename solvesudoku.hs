@@ -1,6 +1,6 @@
 import Data.List
 
-main = interact (result . (solve) . toTable)
+main = interact (result . solve . toTable)
 
 data SudokuResult = Solved [Char] | Unsolvable [Char] (Int, Int)
 result (Solved table) = "Solved table:\n" ++ (toStr table)
@@ -9,7 +9,7 @@ result (Unsolvable table (i, j)) =
     ++ (toStr table)
 
 toTable chars = chars `intersect` (abc `union` emp)
-toStr table = (unlines $ map (intersperse ' ') $ nGroup size table)
+toStr table = unlines $ map (intersperse ' ') $ nGroup size table
 
 (regW, regH) = (3, 3)
 size = regW * regH
