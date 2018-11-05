@@ -27,9 +27,9 @@ solve table = case fieldToSolve table of
     where branch (i, p) = try (i, p) 0
           try (i, p) j table
             | j == length p = Unsolvable table $ toIJ i
-            | otherwise = result $ solve $ replaceAt i (p !! 0) table
-            where result (Unsolvable table _) = try (i, p) (j + 1) table
-                  result res = res
+            | otherwise = res $ solve $ replaceAt i (p !! j) table
+            where res (Unsolvable _ _) = try (i, p) (j + 1) table
+                  res r = r
 
 fieldToSolve table = maybe Nothing try $ unfat 0
   where
@@ -55,8 +55,6 @@ possibleAt index table = abc \\ (rowVals `union` colVals `union` regVals)
     values list0 list1 = map valueAt $ [(i,j) | i <- list0, j <- list1]
     valueAt (i, j) = table !! (i * size + j)
     (i, j) = toIJ index
-
-
 
 replaceAt _ _ [] = []
 replaceAt i e (a:as)
