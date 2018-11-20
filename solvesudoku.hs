@@ -40,7 +40,7 @@ fieldToSolve table = maybe Nothing try $ unfat 0
       | length p <= length p1 = tryOn (i, p) (unfat $ i1 + 1)
       | length p1 == 1 = Just (i1, p1)
       | otherwise = tryOn (i1, p1) (unfat $ i1 + 1)
-    unfat i
+    unfat i --unfilled at
       | i >= fieldN = Nothing
       | (table !! i) `elem` abc = unfat (i + 1)
       | otherwise = Just (i, possibleAt i table)
