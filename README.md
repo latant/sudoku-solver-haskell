@@ -1,4 +1,4 @@
-# sudok-solver-haskell
+# sudoku-solver-haskell
 Sudoku solver program written in Haskell
 
 Input file example:
